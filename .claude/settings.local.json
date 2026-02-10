@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:dashboard.n8n-mcp.com)",
+      "WebSearch",
+      "WebFetch(domain:www.n8n-mcp.com)",
+      "WebFetch(domain:docs.n8n.io)",
+      "WebFetch(domain:n8n.io)",
+      "Bash(git clone:*)",
+      "Bash(powershell -Command:*)",
+      "mcp__n8n-mcp__search_nodes",
+      "mcp__n8n-mcp__n8n_health_check",
+      "mcp__n8n-mcp__n8n_list_workflows",
+      "mcp__n8n-mcp__get_node",
+      "WebFetch(domain:doc.evolution-api.com)",
+      "WebFetch(domain:www.hacodered.co.uk)",
+      "WebFetch(domain:www.postman.com)",
+      "WebFetch(domain:community.n8n.io)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "n8n-mcp"
+  ]
+}
