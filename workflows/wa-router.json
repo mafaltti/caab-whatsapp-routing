@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-02-11T03:02:34.333Z",
+  "updatedAt": "2026-02-11T03:28:46.269Z",
   "createdAt": "2026-02-10T20:25:30.102Z",
   "id": "bS0Mog4nsCyAT7Ao",
   "name": "[WA] Router",
@@ -394,7 +394,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const msg = $('Flatten State Row').first().json;\nconst greetingData = $('Compose Greeting').first().json;\nconst context = greetingData.conversation_context || 'Sem historico anterior';\n\n// Rotate Groq API keys to distribute rate limits (4 keys = 120 RPM)\nconst groqKeys = [\n  'GROQ_API_KEY_1',\n  'GROQ_API_KEY_2',\n  'GROQ_API_KEY_3',\n  'GROQ_API_KEY_4'\n];\nconst groq_api_key = groqKeys[Math.floor(Math.random() * groqKeys.length)];\n\nconst systemPrompt = `Voce e um classificador de mensagens para a Caixa de Assistencia dos Advogados da Bahia (CAAB). Classifique a intencao do usuario em uma das categorias abaixo.\n\nCategorias:\n- support: problemas tecnicos, reclamacoes, duvidas sobre procedimentos\n- sales: interesse em novos servicos, planos, precos\n- scheduling: agendamento, reagendamento, cancelamento de consultas\n- billing: pagamentos, boletos, notas fiscais, cobrancas\n- human: quando nenhuma categoria se aplica ou usuario pede atendente\n- unclear: saudacoes simples (oi, ola, bom dia), mensagens vagas sem intencao clara\n\nResponda APENAS com JSON valido: {\"route\": \"<categoria>\", \"confidence\": <0.0-1.0>, \"reason\": \"<motivo>\"}`;\n\nconst userMessage = `Historico recente:\\n${context}\\n\\nMensagem atual do usuario: ${msg.text}`;\n\nreturn [{\n  json: {\n    ...msg,\n    groq_api_key,\n    llm_body: {\n      model: 'llama-3.3-70b-versatile',\n      messages: [\n        { role: 'system', content: systemPrompt },\n        { role: 'user', content: userMessage }\n      ],\n      temperature: 0,\n      max_tokens: 200\n    }\n  }\n}];"
+        "jsCode": "const msg = $('Flatten State Row').first().json;\nconst contextRow = $input.first().json;\nconst context = contextRow.conversation_context || 'Sem historico anterior';\n\n// Rotate Groq API keys to distribute rate limits (4 keys = 120 RPM)\nconst groqKeys = [\n  'GROQ_API_KEY_1',\n  'GROQ_API_KEY_2',\n  'GROQ_API_KEY_3',\n  'GROQ_API_KEY_4'\n];\nconst groq_api_key = groqKeys[Math.floor(Math.random() * groqKeys.length)];\n\nconst systemPrompt = `Voce e um classificador de mensagens para a Caixa de Assistencia dos Advogados da Bahia (CAAB). Classifique a intencao do usuario em uma das categorias abaixo.\n\nCategorias:\n- support: problemas tecnicos, reclamacoes, duvidas sobre procedimentos\n- sales: interesse em novos servicos, planos, precos\n- scheduling: agendamento, reagendamento, cancelamento de consultas\n- billing: pagamentos, boletos, notas fiscais, cobrancas\n- human: quando nenhuma categoria se aplica ou usuario pede atendente\n- unclear: saudacoes simples (oi, ola, bom dia), mensagens vagas sem intencao clara\n\nResponda APENAS com JSON valido: {\"route\": \"<categoria>\", \"confidence\": <0.0-1.0>, \"reason\": \"<motivo>\"}`;\n\nconst userMessage = `Historico recente:\\n${context}\\n\\nMensagem atual do usuario: ${msg.text}`;\n\nreturn [{\n  json: {\n    ...msg,\n    groq_api_key,\n    llm_body: {\n      model: 'llama-3.3-70b-versatile',\n      messages: [\n        { role: 'system', content: systemPrompt },\n        { role: 'user', content: userMessage }\n      ],\n      temperature: 0,\n      max_tokens: 200\n    }\n  }\n}];"
       },
       "id": "code-prompt",
       "name": "Build LLM Prompt",
@@ -798,142 +798,8 @@
       ]
     },
     {
-      "id": "code-greeting",
-      "name": "Compose Greeting",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2208,
-        704
-      ],
-      "parameters": {
-        "jsCode": "const msg = $('Flatten State Row').first().json;\nconst contextRow = $input.first().json;\nconst hasHistory = contextRow.has_history || false;\n\n// Check if last outbound message was already a greeting\nconst context = contextRow.conversation_context || '';\nconst lines = context.split('\\n');\nconst lastOutbound = lines.filter(l => l.startsWith('out: ')).pop() || '';\n\nlet greeting = '';\nlet skipGreeting = false;\n\nif (lastOutbound.includes('Eu sou a Caabot') || lastOutbound.includes('diga de forma direta')) {\n  // Already greeted recently - skip sending another greeting\n  skipGreeting = true;\n} else if (hasHistory) {\n  greeting = 'Bom ter voce aqui de novo! \\ud83d\\udc4bEu sou a Caabot, a atendente virtual da CAAB. Me diz como posso te ajudar.';\n} else {\n  greeting = 'Ola! \\ud83d\\udc4bEu sou a Caabot, a atendente virtual da CAAB. Me diz como posso te ajudar.';\n}\n\nreturn [{\n  json: {\n    ...msg,\n    conversation_context: contextRow.conversation_context,\n    has_history: hasHistory,\n    greeting_text: greeting,\n    skip_greeting: skipGreeting\n  }\n}];"
-      }
-    },
-    {
-      "id": "http-greeting",
-      "name": "Send Greeting",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        2656,
-        704
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "=https://evov2.arm03.danilocarneiro.com/message/sendText/{{ $json.instance }}",
-        "sendHeaders": true,
-        "specifyHeaders": "keypair",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "EVOLUTION_API_KEY"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: $json.user_id, text: $json.greeting_text }) }}",
-        "options": {}
-      },
-      "continueOnFail": false,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "pg-save-greeting",
-      "name": "Save Greeting",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        2880,
-        704
-      ],
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO chat_messages (user_id, instance, direction, message_id, text)\nVALUES ($1, $2, 'out', $3, $4)",
-        "options": {
-          "queryReplacement": "={{ $('Compose Greeting').first().json.user_id }},={{ $('Compose Greeting').first().json.instance }},={{ 'greeting_' + Date.now() }},={{ $('Compose Greeting').first().json.greeting_text }}"
-        }
-      },
-      "credentials": {
-        "postgres": {
-          "id": "Pe4dE5oSdLOI86yp",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "id": "if-skip-greeting",
-      "name": "Skip Greeting?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        2432,
-        704
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "version": 2,
-            "leftValue": "",
-            "caseSensitive": true,
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "check-skip",
-              "leftValue": "={{ $json.skip_greeting }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "if-nudge",
-      "name": "Nudge Needed?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        4208,
-        800
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "version": 2,
-            "leftValue": "",
-            "caseSensitive": true,
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "check-nudge",
-              "leftValue": "={{ $('Compose Greeting').first().json.skip_greeting }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
       "id": "http-nudge",
-      "name": "Send Nudge",
+      "name": "Send Unclear Response",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
@@ -955,14 +821,14 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ number: $json.user_id, text: 'Por favor, me diga de forma direta como posso te ajudar.' }) }}",
+        "jsonBody": "={{ JSON.stringify({ number: $json.user_id, text: $json.response_text }) }}",
         "options": {}
       },
       "onError": "continueRegularOutput"
     },
     {
       "id": "pg-save-nudge",
-      "name": "Save Nudge",
+      "name": "Save Unclear Response",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -973,7 +839,7 @@
         "operation": "executeQuery",
         "query": "INSERT INTO chat_messages (user_id, instance, direction, message_id, text)\nVALUES ($1, $2, 'out', $3, $4)",
         "options": {
-          "queryReplacement": "={{ $('Flatten State Row').first().json.user_id }},={{ $('Flatten State Row').first().json.instance }},={{ 'nudge_' + Date.now() }},={{ 'Por favor, me diga de forma direta como posso te ajudar.' }}"
+          "queryReplacement": "={{ $('Handle Unclear Intent').first().json.user_id }},={{ $('Handle Unclear Intent').first().json.instance }},={{ 'unclear_' + Date.now() }},={{ $('Handle Unclear Intent').first().json.response_text }}"
         }
       },
       "credentials": {
@@ -981,6 +847,19 @@
           "id": "Pe4dE5oSdLOI86yp",
           "name": "Postgres account"
         }
+      }
+    },
+    {
+      "id": "code-unclear",
+      "name": "Handle Unclear Intent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4208,
+        800
+      ],
+      "parameters": {
+        "jsCode": "const msg = $('Flatten State Row').first().json;\nconst contextData = $('Load Last 10 Messages').first().json;\nconst context = contextData.conversation_context || '';\nconst hasHistory = contextData.has_history || false;\nconst lines = context.split('\\n');\nconst outbounds = lines.filter(l => l.startsWith('out: '));\n\nlet responseText;\nconst alreadyGreeted = outbounds.some(l =>\n  l.includes('Eu sou a Caabot') || l.includes('diga de forma direta')\n);\n\nif (alreadyGreeted) {\n  responseText = 'Por favor, me diga de forma direta como posso te ajudar.';\n} else if (hasHistory) {\n  responseText = 'Bom ter voce aqui de novo! \\ud83d\\udc4bEu sou a Caabot, a atendente virtual da CAAB. Me diz como posso te ajudar.';\n} else {\n  responseText = 'Ola! \\ud83d\\udc4bEu sou a Caabot, a atendente virtual da CAAB. Me diz como posso te ajudar.';\n}\n\nreturn [{\n  json: {\n    ...msg,\n    response_text: responseText\n  }\n}];"
       }
     }
   ],
@@ -1169,39 +1048,6 @@
         ]
       ]
     },
-    "Load Last 10 Messages": {
-      "main": [
-        [
-          {
-            "node": "Compose Greeting",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send Greeting": {
-      "main": [
-        [
-          {
-            "node": "Save Greeting",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save Greeting": {
-      "main": [
-        [
-          {
-            "node": "Build LLM Prompt",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Build LLM Prompt": {
       "main": [
         [
@@ -1303,14 +1149,12 @@
         ],
         [
           {
-            "node": "Nudge Needed?",
+            "node": "OK",
             "type": "main",
             "index": 0
-          }
-        ],
-        [
+          },
           {
-            "node": "OK",
+            "node": "Handle Unclear Intent",
             "type": "main",
             "index": 0
           }
@@ -1372,18 +1216,29 @@
         ]
       ]
     },
-    "Compose Greeting": {
+    "Send Unclear Response": {
       "main": [
         [
           {
-            "node": "Skip Greeting?",
+            "node": "Save Unclear Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Skip Greeting?": {
+    "Save Unclear Response": {
+      "main": [
+        [
+          {
+            "node": "OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Last 10 Messages": {
       "main": [
         [
           {
@@ -1391,50 +1246,14 @@
             "type": "main",
             "index": 0
           }
-        ],
-        [
-          {
-            "node": "Send Greeting",
-            "type": "main",
-            "index": 0
-          }
         ]
       ]
     },
-    "Nudge Needed?": {
+    "Handle Unclear Intent": {
       "main": [
         [
           {
-            "node": "Send Nudge",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "OK",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send Nudge": {
-      "main": [
-        [
-          {
-            "node": "Save Nudge",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save Nudge": {
-      "main": [
-        [
-          {
-            "node": "OK",
+            "node": "Send Unclear Response",
             "type": "main",
             "index": 0
           }
@@ -1447,6 +1266,1340 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "6dfedd31-cb9b-4fd7-ad6c-6455af6dac7e",
-  "activeVersionId": "6dfedd31-cb9b-4fd7-ad6c-6455af6dac7e"
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "02c1d546-c01e-483c-8a3d-f0c93f0497e5",
+  "activeVersionId": "02c1d546-c01e-483c-8a3d-f0c93f0497e5",
+  "versionCounter": 101,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-10T20:25:30.105Z",
+      "createdAt": "2026-02-10T20:25:30.105Z",
+      "role": "workflow:owner",
+      "workflowId": "bS0Mog4nsCyAT7Ao",
+      "projectId": "G6GMzxmlNZpxL2mm",
+      "project": {
+        "updatedAt": "2026-02-10T14:48:55.881Z",
+        "createdAt": "2026-02-10T14:45:42.697Z",
+        "id": "G6GMzxmlNZpxL2mm",
+        "name": "Danilo N8n@1989! <contato@danilocarneiro.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "8c6e7464-19c5-4247-b98b-f8855b7cae55",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-02-10T14:45:42.697Z",
+            "createdAt": "2026-02-10T14:45:42.697Z",
+            "userId": "8c6e7464-19c5-4247-b98b-f8855b7cae55",
+            "projectId": "G6GMzxmlNZpxL2mm",
+            "user": {
+              "updatedAt": "2026-02-11T03:02:33.000Z",
+              "createdAt": "2026-02-10T14:45:42.320Z",
+              "id": "8c6e7464-19c5-4247-b98b-f8855b7cae55",
+              "email": "contato@danilocarneiro.com",
+              "firstName": "Danilo",
+              "lastName": "N8n@1989!",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2026-02-10T14:50:04.946Z",
+                "personalization_survey_n8n_version": "2.6.4",
+                "companySize": "<20",
+                "companyType": "saas",
+                "role": "business-owner",
+                "reportedSource": "youtube"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "JZplqEAVOQ3wQIEX",
+                "userActivatedAt": 1770760820689
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-02-11",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-02-11T03:28:46.270Z",
+    "createdAt": "2026-02-11T03:28:46.270Z",
+    "versionId": "02c1d546-c01e-483c-8a3d-f0c93f0497e5",
+    "workflowId": "bS0Mog4nsCyAT7Ao",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "evolution-webhook",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "wh-1",
+        "name": "Evolution - messages.upsert",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          304
+        ],
+        "webhookId": "5af27413-0629-498c-96b0-d839cf6e3706"
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.first().json.body;\n\n// Only process messages.upsert events — skip all others\nif (body.event !== 'messages.upsert') {\n  return [{\n    json: {\n      user_id: '',\n      instance: body.instance || '',\n      message_id: '',\n      fromMe: true,\n      isGroup: false,\n      text: '',\n      pushName: '',\n      raw: body,\n      _skipped: true\n    }\n  }];\n}\n\nconst data = body.data;\nconst key = data.key;\nconst msg = data.message;\n\nconst remoteJid = key.remoteJid || '';\nconst isGroup = remoteJid.endsWith('@g.us');\nconst fromMe = key.fromMe || false;\nconst message_id = key.id;\nconst instance = body.instance;\n\n// Handle WhatsApp LID format: remoteJid may be a LID (e.g. 12345@lid)\n// In that case, the actual phone number is in body.sender\nlet user_id;\nif (remoteJid.endsWith('@lid')) {\n  const sender = body.sender || '';\n  user_id = sender.replace(/@s\\.whatsapp\\.net$/, '');\n} else {\n  user_id = remoteJid.replace(/@s\\.whatsapp\\.net$/, '').replace(/@g\\.us$/, '');\n}\n\nlet text = '';\nif (msg) {\n  text = msg.conversation\n    || (msg.extendedTextMessage && msg.extendedTextMessage.text)\n    || (msg.imageMessage && msg.imageMessage.caption)\n    || (msg.videoMessage && msg.videoMessage.caption)\n    || (msg.documentMessage && msg.documentMessage.caption)\n    || '';\n}\n\nreturn [{\n  json: {\n    user_id,\n    instance,\n    message_id,\n    fromMe,\n    isGroup,\n    text,\n    pushName: data.pushName || '',\n    raw: body\n  }\n}];"
+        },
+        "id": "code-norm",
+        "name": "Normalize Evolution Payload",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "check-fromme",
+                "leftValue": "={{ $json.fromMe }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "if-fromme",
+        "name": "Ignore fromMe",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          448,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "check-group",
+                "leftValue": "={{ $json.isGroup }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "if-groups",
+        "name": "Ignore Groups",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          672,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO chat_messages (user_id, instance, direction, message_id, text)\nVALUES ($1, $2, 'in', $3, $4)\nON CONFLICT (message_id) DO UPDATE SET text = EXCLUDED.text\nRETURNING id, (xmax = 0) as is_new",
+          "options": {
+            "queryReplacement": "={{ $json.user_id }},={{ $json.instance }},={{ $json.message_id }},={{ $json.text }}"
+          }
+        },
+        "id": "pg-save-in",
+        "name": "Save Inbound Message",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          880,
+          304
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "Pe4dE5oSdLOI86yp",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const pgResult = $input.first().json;\nconst isDuplicate = !pgResult.is_new;\nconst prevData = $('Normalize Evolution Payload').first().json;\n\nreturn [{\n  json: {\n    ...prevData,\n    isDuplicate,\n    db_id: pgResult.id || null\n  }\n}];"
+        },
+        "id": "code-dedupe",
+        "name": "Check Dedupe Result",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1104,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "check-dup",
+                "leftValue": "={{ $json.isDuplicate }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "if-dup",
+        "name": "Is Duplicate?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          1328,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT cs.user_id, cs.instance, cs.active_flow, cs.step, cs.data, cs.updated_at, cs.expires_at\nFROM (SELECT $1::text as uid) q\nLEFT JOIN conversation_state cs ON cs.user_id = q.uid",
+          "options": {
+            "queryReplacement": "={{ $json.user_id }}"
+          }
+        },
+        "id": "pg-load-state",
+        "name": "Load Conversation State",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          1552,
+          304
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "Pe4dE5oSdLOI86yp",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const msg = $('Check Dedupe Result').first().json;\nconst pgItems = $input.all();\n\nlet hasValidState = false;\nlet active_flow = null;\nlet step = null;\nlet data = {};\n\nif (pgItems.length > 0 && pgItems[0].json && pgItems[0].json.active_flow) {\n  const stateRow = pgItems[0].json;\n  const expiresAt = stateRow.expires_at ? new Date(stateRow.expires_at) : null;\n  const now = new Date();\n\n  if (!expiresAt || expiresAt > now) {\n    hasValidState = true;\n    active_flow = stateRow.active_flow;\n    step = stateRow.step;\n    data = stateRow.data || {};\n  }\n}\n\nreturn [{\n  json: {\n    user_id: msg.user_id,\n    instance: msg.instance,\n    text: msg.text,\n    message_id: msg.message_id,\n    pushName: msg.pushName,\n    raw: msg.raw,\n    hasValidState,\n    active_flow,\n    step,\n    data\n  }\n}];"
+        },
+        "id": "code-flatten",
+        "name": "Flatten State Row",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1760,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 2,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "check-state",
+                "leftValue": "={{ $json.hasValidState }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "if-state",
+        "name": "State Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          1984,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.active_flow }}",
+                      "rightValue": "support",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "support"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.active_flow }}",
+                      "rightValue": "sales",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "sales"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.active_flow }}",
+                      "rightValue": "scheduling",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "scheduling"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.active_flow }}",
+                      "rightValue": "billing",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "billing"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.active_flow }}",
+                      "rightValue": "human",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "human"
+              }
+            ]
+          },
+          "options": {
+            "fallbackOutput": "extra"
+          }
+        },
+        "id": "switch-flow",
+        "name": "Route by active_flow",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.4,
+        "position": [
+          2208,
+          208
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT\n  COALESCE(\n    (SELECT string_agg(direction || ': ' || text, E'\\n' ORDER BY created_at ASC)\n     FROM (\n       SELECT direction, text, created_at\n       FROM chat_messages\n       WHERE user_id = $1\n       ORDER BY created_at DESC\n       LIMIT 10\n     ) recent),\n    'Sem historico anterior'\n  ) as conversation_context,\n  EXISTS(SELECT 1 FROM chat_messages WHERE user_id = $1 AND direction = 'out') as has_history",
+          "options": {
+            "queryReplacement": "={{ $json.user_id }}"
+          }
+        },
+        "id": "pg-last10",
+        "name": "Load Last 10 Messages",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          1984,
+          704
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "Pe4dE5oSdLOI86yp",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const msg = $('Flatten State Row').first().json;\nconst contextRow = $input.first().json;\nconst context = contextRow.conversation_context || 'Sem historico anterior';\n\n// Rotate Groq API keys to distribute rate limits (4 keys = 120 RPM)\nconst groqKeys = [\n  'GROQ_API_KEY_1',\n  'GROQ_API_KEY_2',\n  'GROQ_API_KEY_3',\n  'GROQ_API_KEY_4'\n];\nconst groq_api_key = groqKeys[Math.floor(Math.random() * groqKeys.length)];\n\nconst systemPrompt = `Voce e um classificador de mensagens para a Caixa de Assistencia dos Advogados da Bahia (CAAB). Classifique a intencao do usuario em uma das categorias abaixo.\n\nCategorias:\n- support: problemas tecnicos, reclamacoes, duvidas sobre procedimentos\n- sales: interesse em novos servicos, planos, precos\n- scheduling: agendamento, reagendamento, cancelamento de consultas\n- billing: pagamentos, boletos, notas fiscais, cobrancas\n- human: quando nenhuma categoria se aplica ou usuario pede atendente\n- unclear: saudacoes simples (oi, ola, bom dia), mensagens vagas sem intencao clara\n\nResponda APENAS com JSON valido: {\"route\": \"<categoria>\", \"confidence\": <0.0-1.0>, \"reason\": \"<motivo>\"}`;\n\nconst userMessage = `Historico recente:\\n${context}\\n\\nMensagem atual do usuario: ${msg.text}`;\n\nreturn [{\n  json: {\n    ...msg,\n    groq_api_key,\n    llm_body: {\n      model: 'llama-3.3-70b-versatile',\n      messages: [\n        { role: 'system', content: systemPrompt },\n        { role: 'user', content: userMessage }\n      ],\n      temperature: 0,\n      max_tokens: 200\n    }\n  }\n}];"
+        },
+        "id": "code-prompt",
+        "name": "Build LLM Prompt",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3104,
+          704
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{ 'Bearer ' + $json.groq_api_key }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.llm_body) }}",
+          "options": {}
+        },
+        "id": "http-llm",
+        "name": "LLM Classify Intent",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          3328,
+          704
+        ],
+        "retryOnFail": false,
+        "maxTries": 5,
+        "waitBetweenTries": 30000,
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const item = $input.first().json;\nconst msgData = $('Flatten State Row').first().json;\n\nlet route = 'human';\nlet confidence = 0;\nlet reason = 'Parse error - defaulting to human';\n\n// Check if LLM call failed (continueOnFail produces error field)\nif (item.error || !item.choices) {\n  return [{\n    json: {\n      ...msgData,\n      route: 'human',\n      confidence: 0,\n      reason: 'LLM unavailable (' + (item.error?.message || item.error || 'no response') + ') - routing to human'\n    }\n  }];\n}\n\ntry {\n  let responseText = item.choices[0].message.content;\n  // Strip markdown code blocks if present\n  responseText = responseText.replace(/```json\\s*/gi, '').replace(/```\\s*/g, '').trim();\n  \n  let jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  \n  if (!jsonMatch && responseText.includes('{')) {\n    let partial = responseText.substring(responseText.indexOf('{'));\n    if (!partial.endsWith('}')) {\n      partial = partial.replace(/,?\\s*$/, '') + '}';\n      partial = partial.replace(/(\\d+)\\.$/, '$1.0');\n      partial = partial.replace(/(\\d+)\\.\\s*}/, '$1.0}');\n    }\n    try {\n      JSON.parse(partial);\n      jsonMatch = [partial];\n    } catch(e2) {\n      const routeMatch = responseText.match(/\"route\"\\s*:\\s*\"(\\w+)\"/);\n      if (routeMatch) {\n        const validRoutes = ['support', 'sales', 'scheduling', 'billing', 'human', 'unclear'];\n        if (validRoutes.includes(routeMatch[1])) {\n          route = routeMatch[1];\n          confidence = 0.85;\n          reason = 'Extracted from truncated response';\n        }\n      }\n    }\n  }\n  \n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    const validRoutes = ['support', 'sales', 'scheduling', 'billing', 'human', 'unclear'];\n    if (parsed.route && validRoutes.includes(parsed.route)) {\n      route = parsed.route;\n    }\n    if (typeof parsed.confidence === 'number') {\n      confidence = parsed.confidence;\n    }\n    if (parsed.reason) {\n      reason = parsed.reason;\n    }\n  }\n} catch (e) {\n  // Keep defaults (human route)\n}\n\nreturn [{\n  json: {\n    ...msgData,\n    route,\n    confidence,\n    reason\n  }\n}];"
+        },
+        "id": "code-parse",
+        "name": "Parse LLM Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3536,
+          704
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "version": 3,
+              "leftValue": "",
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "check-conf",
+                "leftValue": "={{ $json.confidence }}",
+                "rightValue": 0.7,
+                "operator": {
+                  "type": "number",
+                  "operation": "gte"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "if-conf",
+        "name": "Confidence Guard",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          3760,
+          704
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    ...item,\n    route: 'human',\n    reason: 'Low confidence (' + item.confidence + ') - routing to human'\n  }\n}];"
+        },
+        "id": "code-force-human",
+        "name": "Force Human Route",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3760,
+          960
+        ]
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.route }}",
+                      "rightValue": "support",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "support"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.route }}",
+                      "rightValue": "sales",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "sales"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.route }}",
+                      "rightValue": "scheduling",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "scheduling"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.route }}",
+                      "rightValue": "billing",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "billing"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.route }}",
+                      "rightValue": "human",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "human"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": ""
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.route }}",
+                      "rightValue": "unclear",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "unclear"
+              }
+            ]
+          },
+          "options": {
+            "fallbackOutput": "extra"
+          }
+        },
+        "id": "switch-class",
+        "name": "Route by Classification",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.4,
+        "position": [
+          3984,
+          704
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "et7ob9TmlY7re17H"
+          },
+          "options": {}
+        },
+        "id": "exec-support",
+        "name": "Execute WF - Support",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          4208,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "dlgNK7lJcmnwlXBO"
+          },
+          "options": {}
+        },
+        "id": "exec-sales",
+        "name": "Execute WF - Sales",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          4208,
+          160
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "81SWldP39P6haTgM"
+          },
+          "options": {}
+        },
+        "id": "exec-scheduling",
+        "name": "Execute WF - Scheduling",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          4208,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "rVLdFwLTDpamP9QN"
+          },
+          "options": {}
+        },
+        "id": "exec-billing",
+        "name": "Execute WF - Billing",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          4208,
+          464
+        ]
+      },
+      {
+        "parameters": {
+          "workflowId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "JZplqEAVOQ3wQIEX"
+          },
+          "options": {}
+        },
+        "id": "exec-human",
+        "name": "Execute WF - Human",
+        "type": "n8n-nodes-base.executeWorkflow",
+        "typeVersion": 1.2,
+        "position": [
+          4208,
+          608
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "noData",
+          "options": {}
+        },
+        "id": "respond-ok",
+        "name": "OK",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          4416,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## Phase A: Receive & Filter\n\nWebhook receives Evolution API messages.upsert events.\nNormalizes payload, filters out fromMe and group messages."
+        },
+        "id": "sticky-a",
+        "name": "Phase A - Receive & Filter",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -96,
+          64
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## Phase B: Dedupe & Persist\n\nSaves inbound message to chat_messages.\nDeduplicates using message_id (ON CONFLICT)."
+        },
+        "id": "sticky-b",
+        "name": "Phase B - Dedupe & Persist",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          688,
+          64
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## Phase C: State Machine\n\nLoads conversation_state for active flow.\nIf valid (not expired), routes to existing sub-workflow.\nOtherwise, falls through to LLM classification."
+        },
+        "id": "sticky-c",
+        "name": "Phase C - State Machine",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1344,
+          64
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## Phase D: Greeting + LLM Classification\n\nSends Caabot greeting (first-time vs returning user).\nLoads last 10 messages for context.\nUses Groq (Llama 3.3 70B) to classify intent.\nRoutes to sub-workflow based on classification.\n\"unclear\" intents (greetings, vague messages) stop after greeting.\nLow confidence (< 0.70) routes to human."
+        },
+        "id": "sticky-d",
+        "name": "Phase D - LLM Classification",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1792,
+          480
+        ]
+      },
+      {
+        "id": "http-nudge",
+        "name": "Send Unclear Response",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          4432,
+          800
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "=https://evov2.arm03.danilocarneiro.com/message/sendText/{{ $json.instance }}",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "EVOLUTION_API_KEY"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ number: $json.user_id, text: $json.response_text }) }}",
+          "options": {}
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "pg-save-nudge",
+        "name": "Save Unclear Response",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.6,
+        "position": [
+          4656,
+          800
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO chat_messages (user_id, instance, direction, message_id, text)\nVALUES ($1, $2, 'out', $3, $4)",
+          "options": {
+            "queryReplacement": "={{ $('Handle Unclear Intent').first().json.user_id }},={{ $('Handle Unclear Intent').first().json.instance }},={{ 'unclear_' + Date.now() }},={{ $('Handle Unclear Intent').first().json.response_text }}"
+          }
+        },
+        "credentials": {
+          "postgres": {
+            "id": "Pe4dE5oSdLOI86yp",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "id": "code-unclear",
+        "name": "Handle Unclear Intent",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          4208,
+          800
+        ],
+        "parameters": {
+          "jsCode": "const msg = $('Flatten State Row').first().json;\nconst contextData = $('Load Last 10 Messages').first().json;\nconst context = contextData.conversation_context || '';\nconst hasHistory = contextData.has_history || false;\nconst lines = context.split('\\n');\nconst outbounds = lines.filter(l => l.startsWith('out: '));\n\nlet responseText;\nconst alreadyGreeted = outbounds.some(l =>\n  l.includes('Eu sou a Caabot') || l.includes('diga de forma direta')\n);\n\nif (alreadyGreeted) {\n  responseText = 'Por favor, me diga de forma direta como posso te ajudar.';\n} else if (hasHistory) {\n  responseText = 'Bom ter voce aqui de novo! \\ud83d\\udc4bEu sou a Caabot, a atendente virtual da CAAB. Me diz como posso te ajudar.';\n} else {\n  responseText = 'Ola! \\ud83d\\udc4bEu sou a Caabot, a atendente virtual da CAAB. Me diz como posso te ajudar.';\n}\n\nreturn [{\n  json: {\n    ...msg,\n    response_text: responseText\n  }\n}];"
+        }
+      }
+    ],
+    "connections": {
+      "Evolution - messages.upsert": {
+        "main": [
+          [
+            {
+              "node": "Normalize Evolution Payload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Normalize Evolution Payload": {
+        "main": [
+          [
+            {
+              "node": "Ignore fromMe",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Ignore fromMe": {
+        "main": [
+          [
+            {
+              "node": "OK",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Ignore Groups",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Ignore Groups": {
+        "main": [
+          [
+            {
+              "node": "OK",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Save Inbound Message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save Inbound Message": {
+        "main": [
+          [
+            {
+              "node": "Check Dedupe Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Dedupe Result": {
+        "main": [
+          [
+            {
+              "node": "Is Duplicate?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Duplicate?": {
+        "main": [
+          [
+            {
+              "node": "OK",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Load Conversation State",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Load Conversation State": {
+        "main": [
+          [
+            {
+              "node": "Flatten State Row",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Flatten State Row": {
+        "main": [
+          [
+            {
+              "node": "State Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "State Valid?": {
+        "main": [
+          [
+            {
+              "node": "Route by active_flow",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Load Last 10 Messages",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Route by active_flow": {
+        "main": [
+          [
+            {
+              "node": "Execute WF - Support",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Execute WF - Sales",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Execute WF - Scheduling",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Execute WF - Billing",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Execute WF - Human",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Load Last 10 Messages",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build LLM Prompt": {
+        "main": [
+          [
+            {
+              "node": "LLM Classify Intent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "LLM Classify Intent": {
+        "main": [
+          [
+            {
+              "node": "Parse LLM Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse LLM Response": {
+        "main": [
+          [
+            {
+              "node": "Confidence Guard",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Confidence Guard": {
+        "main": [
+          [
+            {
+              "node": "Route by Classification",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Force Human Route",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Force Human Route": {
+        "main": [
+          [
+            {
+              "node": "Execute WF - Human",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Route by Classification": {
+        "main": [
+          [
+            {
+              "node": "Execute WF - Support",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Execute WF - Sales",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Execute WF - Scheduling",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Execute WF - Billing",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Execute WF - Human",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "OK",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Handle Unclear Intent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Execute WF - Support": {
+        "main": [
+          [
+            {
+              "node": "OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Execute WF - Sales": {
+        "main": [
+          [
+            {
+              "node": "OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Execute WF - Scheduling": {
+        "main": [
+          [
+            {
+              "node": "OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Execute WF - Billing": {
+        "main": [
+          [
+            {
+              "node": "OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Execute WF - Human": {
+        "main": [
+          [
+            {
+              "node": "OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send Unclear Response": {
+        "main": [
+          [
+            {
+              "node": "Save Unclear Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save Unclear Response": {
+        "main": [
+          [
+            {
+              "node": "OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Load Last 10 Messages": {
+        "main": [
+          [
+            {
+              "node": "Build LLM Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Handle Unclear Intent": {
+        "main": [
+          [
+            {
+              "node": "Send Unclear Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Danilo N8n@1989!",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-02-11T03:28:46.355Z",
+        "id": 61,
+        "workflowId": "bS0Mog4nsCyAT7Ao",
+        "versionId": "02c1d546-c01e-483c-8a3d-f0c93f0497e5",
+        "event": "activated",
+        "userId": "8c6e7464-19c5-4247-b98b-f8855b7cae55"
+      }
+    ]
+  }
 }
