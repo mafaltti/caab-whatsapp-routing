@@ -1,0 +1,220 @@
+{
+  "updatedAt": "2026-02-11T01:01:51.184Z",
+  "createdAt": "2026-02-10T20:17:18.333Z",
+  "id": "dlgNK7lJcmnwlXBO",
+  "name": "[WA] Flow - Sales",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "name": "When Called By Main Router",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "parameters": { "inputSource": "passthrough" }
+    },
+    {
+      "id": "code-step",
+      "name": "Determine Step",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst step = item.step || 'greeting';\n\nreturn [{\n  json: {\n    step,\n    user_id: item.user_id,\n    instance: item.instance,\n    text: item.text,\n    message_id: item.message_id,\n    data: item.data || {},\n    raw: item.raw\n  }\n}];"
+      }
+    },
+    {
+      "id": "switch-step",
+      "name": "Route by Step",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [440, 0],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [{ "leftValue": "={{ $json.step }}", "rightValue": "greeting", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "greeting"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [{ "leftValue": "={{ $json.step }}", "rightValue": "collect_info", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "collect_info"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [{ "leftValue": "={{ $json.step }}", "rightValue": "complete", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "complete"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      }
+    },
+    {
+      "id": "code-greeting",
+      "name": "Handle Step: greeting",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, -200],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    ...item,\n    reply_text: 'Ol\u00e1! Bem-vindo ao setor comercial da CAAB. Como posso ajud\u00e1-lo com nossos produtos e servi\u00e7os?',\n    next_step: 'collect_info',\n    active_flow: 'sales',\n    out_message_id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)\n  }\n}];"
+      }
+    },
+    {
+      "id": "code-collect",
+      "name": "Handle Step: collect_info",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 0],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    ...item,\n    reply_text: 'Obrigado pelo interesse! Registramos suas informa\u00e7\u00f5es e um consultor comercial entrar\u00e1 em contato em breve.',\n    next_step: null,\n    active_flow: 'sales',\n    data: { ...item.data, interest: item.text },\n    out_message_id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)\n  }\n}];"
+      }
+    },
+    {
+      "id": "code-complete",
+      "name": "Handle Step: complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 200],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    ...item,\n    reply_text: 'Seu atendimento comercial foi finalizado. Caso tenha mais d\u00favidas, \u00e9 s\u00f3 enviar uma nova mensagem. At\u00e9 logo!',\n    next_step: null,\n    active_flow: 'sales',\n    out_message_id: 'out_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)\n  }\n}];"
+      }
+    },
+    {
+      "id": "code-reply",
+      "name": "Collect Reply Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [820, 0],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nreturn [{ json: { ...item } }];"
+      }
+    },
+    {
+      "id": "if-complete",
+      "name": "Is Flow Complete",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [920, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict" },
+          "conditions": [{ "id": "check-complete", "leftValue": "={{ $json.next_step }}", "rightValue": "", "operator": { "type": "string", "operation": "empty" } }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "pg-clear",
+      "name": "Clear Conversation State",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1160, -100],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM conversation_state WHERE user_id = $1",
+        "options": { "queryReplacement": "={{ $json.user_id }}" }
+      },
+      "credentials": { "postgres": { "id": "Pe4dE5oSdLOI86yp", "name": "Postgres account" } }
+    },
+    {
+      "id": "pg-upsert",
+      "name": "Upsert Conversation State",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1160, 100],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversation_state (user_id, instance, active_flow, step, data, updated_at, expires_at)\nVALUES ($1, $2, $3, $4, $5::jsonb, NOW(), NOW() + INTERVAL '30 minutes')\nON CONFLICT (user_id) DO UPDATE SET\n  active_flow = EXCLUDED.active_flow,\n  step = EXCLUDED.step,\n  data = EXCLUDED.data,\n  updated_at = NOW(),\n  expires_at = NOW() + INTERVAL '30 minutes'",
+        "options": { "queryReplacement": "={{ $json.user_id }},={{ $json.instance }},={{ $json.active_flow }},={{ $json.next_step }},={{ JSON.stringify($json.data || {}) }}" }
+      },
+      "credentials": { "postgres": { "id": "Pe4dE5oSdLOI86yp", "name": "Postgres account" } }
+    },
+    {
+      "id": "http-send",
+      "name": "Send WhatsApp Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1400, 0],
+      "parameters": {
+        "curlImport": "",
+        "method": "POST",
+        "url": "=https://evov2.arm03.danilocarneiro.com/message/sendText/{{ $('Collect Reply Data').first().json.instance }}",
+        "authentication": "none",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": { "parameters": [{ "name": "apikey", "value": "EVOLUTION_API_KEY" }] },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Collect Reply Data').first().json.user_id, text: $('Collect Reply Data').first().json.reply_text }) }}",
+        "options": {},
+        "infoMessage": ""
+      }
+    },
+    {
+      "id": "pg-save-out",
+      "name": "Save Outbound Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1620, 0],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO chat_messages (user_id, instance, direction, message_id, text)\nVALUES ($1, $2, 'out', $3, $4)",
+        "options": { "queryReplacement": "={{ $('Collect Reply Data').first().json.user_id }},={{ $('Collect Reply Data').first().json.instance }},={{ $('Collect Reply Data').first().json.out_message_id }},={{ $('Collect Reply Data').first().json.reply_text }}" }
+      },
+      "credentials": { "postgres": { "id": "Pe4dE5oSdLOI86yp", "name": "Postgres account" } }
+    },
+    {
+      "id": "sticky-1",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-200, -300],
+      "parameters": { "content": "## [WA] Flow - Sales\n\nMulti-step sales flow.\n**Steps:** greeting \u2192 collect_info \u2192 complete\n\nReceives data from main router via Execute Workflow trigger.\nRequires Postgres credential for DB nodes." }
+    }
+  ],
+  "connections": {
+    "When Called By Main Router": { "main": [[{ "node": "Determine Step", "type": "main", "index": 0 }]] },
+    "Determine Step": { "main": [[{ "node": "Route by Step", "type": "main", "index": 0 }]] },
+    "Route by Step": { "main": [[{ "node": "Handle Step: greeting", "type": "main", "index": 0 }], [{ "node": "Handle Step: collect_info", "type": "main", "index": 0 }], [{ "node": "Handle Step: complete", "type": "main", "index": 0 }], [{ "node": "Handle Step: greeting", "type": "main", "index": 0 }]] },
+    "Handle Step: greeting": { "main": [[{ "node": "Collect Reply Data", "type": "main", "index": 0 }]] },
+    "Handle Step: collect_info": { "main": [[{ "node": "Collect Reply Data", "type": "main", "index": 0 }]] },
+    "Handle Step: complete": { "main": [[{ "node": "Collect Reply Data", "type": "main", "index": 0 }]] },
+    "Collect Reply Data": { "main": [[{ "node": "Is Flow Complete", "type": "main", "index": 0 }]] },
+    "Is Flow Complete": { "main": [[{ "node": "Clear Conversation State", "type": "main", "index": 0 }], [{ "node": "Upsert Conversation State", "type": "main", "index": 0 }]] },
+    "Clear Conversation State": { "main": [[{ "node": "Send WhatsApp Reply", "type": "main", "index": 0 }]] },
+    "Upsert Conversation State": { "main": [[{ "node": "Send WhatsApp Reply", "type": "main", "index": 0 }]] },
+    "Send WhatsApp Reply": { "main": [[{ "node": "Save Outbound Message", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "34271a2c-ca6f-4743-9ed9-77f773970cb2",
+  "activeVersionId": "34271a2c-ca6f-4743-9ed9-77f773970cb2"
+}
