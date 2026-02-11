@@ -35,7 +35,17 @@
       "mcp__n8n-mcp__n8n_validate_workflow",
       "mcp__n8n-mcp__n8n_update_partial_workflow",
       "mcp__n8n-mcp__tools_documentation",
-      "mcp__n8n-mcp__n8n_test_workflow"
+      "mcp__n8n-mcp__n8n_test_workflow",
+      "mcp__n8n-mcp__n8n_get_workflow",
+      "mcp__n8n-mcp__n8n_executions",
+      "WebFetch(domain:evov1.amd01.danilocarneiro.com)",
+      "Bash(Select-String -Pattern 'lid|phone|557')",
+      "Bash(Select-Object -First 20)",
+      "Bash(curl -s -X POST \"https://evov1.amd01.danilocarneiro.com/message/sendText/evo4611\" -H \"Content-Type: application/json\" -H \"apikey: nyyifhposc5pjgcnl1ro4\" -d '{\"\"number\"\": \"\"557181614611\"\", \"\"textMessage\"\": {\"\"text\"\": \"\"Teste direto via curl - ignore esta mensagem\"\"}}')",
+      "Bash(curl:*)",
+      "Bash(python:*)",
+      "Bash($response = curl -s -X POST \"https://evov1.amd01.danilocarneiro.com/chat/findContacts/evo4611\" -H \"Content-Type: application/json\" -H \"apikey: 84a4c0fd414a010c73b251f2f2202a5b\" -d \"{}\")",
+      "Bash(echo:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
