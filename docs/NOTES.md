@@ -14,9 +14,9 @@ Key architectural decisions and operational details accumulated during developme
 ├── [WA] Flow - Billing (rVLdFwLTDpamP9QN)
 ├── [WA] Flow - Human (JZplqEAVOQ3wQIEX)
 └── [WA] Flow - Certificação Digital (PYyaiGP5p0OMGNp1)
-    ├── [WA] Flow - Cert Digital - Código (EFrRsn6cdPSAH5Kr)
-    ├── [WA] Flow - Cert Digital - Renovação (lB9WOqZugEcBl5XQ)
-    └── [WA] Flow - Cert Digital - Suporte Técnico (7DNXs3KnkLMfxeh6)
+    ├── [WA] Flow - Certificação Digital - Código (EFrRsn6cdPSAH5Kr)
+    ├── [WA] Flow - Certificação Digital - Renovação (lB9WOqZugEcBl5XQ)
+    └── [WA] Flow - Certificação Digital - Suporte Técnico (7DNXs3KnkLMfxeh6)
 
 [WA] Flow - Close Chat (7uuqixZ0jWhX1UBi)  ← standalone webhook
 ```
