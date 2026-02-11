@@ -4,24 +4,21 @@ Key architectural decisions and operational details accumulated during developme
 
 ## Architecture
 
-1 Router + 6 sub-flows + 3 cert sub-flows + 1 utility (11 workflows total):
+1 Router + 3 sub-flows + 3 cert sub-flows + 1 utility (8 workflows total):
 
 ```
 [WA] Router (bS0Mog4nsCyAT7Ao)
-├── [WA] Flow - Support (et7ob9TmlY7re17H)
-├── [WA] Flow - Sales (dlgNK7lJcmnwlXBO)
 ├── [WA] Flow - Scheduling (81SWldP39P6haTgM)
-├── [WA] Flow - Billing (rVLdFwLTDpamP9QN)
 ├── [WA] Flow - Human (JZplqEAVOQ3wQIEX)
 └── [WA] Flow - Certificação Digital (PYyaiGP5p0OMGNp1)
     ├── [WA] Flow - Certificação Digital - Código (EFrRsn6cdPSAH5Kr)
-    ├── [WA] Flow - Certificação Digital - Renovação (lB9WOqZugEcBl5XQ)
+    ├── [WA] Flow - Certificação Digital - Compra/Renovação (lB9WOqZugEcBl5XQ)
     └── [WA] Flow - Certificação Digital - Suporte Técnico (7DNXs3KnkLMfxeh6)
 
 [WA] Flow - Close Chat (7uuqixZ0jWhX1UBi)  ← standalone webhook
 ```
 
-- The **Router** is the entry point (webhook from Evolution API). It classifies intent via LLM and calls one of 6 sub-flows via Execute Workflow.
+- The **Router** is the entry point (webhook from Evolution API). It classifies intent via LLM and calls one of 3 sub-flows via Execute Workflow.
 - **Certificação Digital** is itself a mini-router that further classifies into 3 cert sub-flows.
 - **Close Chat** is independent — a webhook endpoint human agents call to release a user from human mode.
 
@@ -44,10 +41,7 @@ To change category definitions or add new categories, edit the `systemPrompt` va
 The Router's `Build LLM Prompt` node constructs a prompt from two inputs:
 
 1. **System prompt with category hints** — tells the LLM what each category means:
-   - `support`: problemas tecnicos, reclamacoes, duvidas sobre procedimentos
-   - `sales`: interesse em novos servicos, planos, precos
    - `scheduling`: agendamento, reagendamento, cancelamento de consultas
-   - `billing`: pagamentos, boletos, notas fiscais, cobrancas
    - `certification`: certificacao digital, codigo, renovacao, token
    - `human`: quando nenhuma categoria se aplica ou usuario pede atendente
    - `unclear`: saudacoes simples (oi, ola, bom dia), mensagens vagas sem intencao clara
@@ -69,10 +63,10 @@ Greeting dedup: the Compose Greeting node checks the last outbound message to av
 
 ## Groq API Key Rotation
 
-Using 4 Groq API keys rotated randomly in the Build LLM Prompt node to stay within the free-tier rate limits:
+Using 5 Groq API keys rotated randomly in the Build LLM Prompt node to stay within the free-tier rate limits:
 
-- **Per key:** 30 RPM, 14,400 RPD
-- **Effective (4 keys):** ~120 RPM, ~57,600 RPD
+- **Per key:** 30 RPM, 1,000 RPD (for `llama-3.3-70b-versatile`)
+- **Effective (5 keys):** ~150 RPM, ~5,000 RPD
 
 Keys are selected randomly at runtime — no round-robin state needed.
 
