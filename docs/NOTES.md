@@ -4,26 +4,62 @@ Key architectural decisions and operational details accumulated during developme
 
 ## Architecture
 
-1 Router + 6 sub-flows + 3 cert sub-flows + 1 utility:
+1 Router + 6 sub-flows + 3 cert sub-flows + 1 utility (11 workflows total):
 
-- **[WA] Router** — Receives incoming WhatsApp messages, classifies intent via LLM, routes to the appropriate sub-flow
-- **[WA] Flow - Support** — Handles support-related messages
-- **[WA] Flow - Sales** — Handles sales inquiries
-- **[WA] Flow - Scheduling** — Handles appointment/scheduling requests
-- **[WA] Flow - Billing** — Handles billing questions
-- **[WA] Flow - Human** — Hands off to a human agent, then keeps the bot silent
-- **[WA] Flow - Certificação Digital** — Mini-router for digital certificate requests (routes to Código/Renovação/Token)
-- **[WA] Flow - Certificação Digital - Código** / **Renovação** / **Token** — Single-shot cert sub-flows
-- **[WA] Flow - Close Chat** — Webhook utility for human agents to release a user back to the bot
+```
+[WA] Router (bS0Mog4nsCyAT7Ao)
+├── [WA] Flow - Support (et7ob9TmlY7re17H)
+├── [WA] Flow - Sales (dlgNK7lJcmnwlXBO)
+├── [WA] Flow - Scheduling (81SWldP39P6haTgM)
+├── [WA] Flow - Billing (rVLdFwLTDpamP9QN)
+├── [WA] Flow - Human (JZplqEAVOQ3wQIEX)
+└── [WA] Flow - Certificação Digital (PYyaiGP5p0OMGNp1)
+    ├── [WA] Flow - Cert Digital - Código (EFrRsn6cdPSAH5Kr)
+    ├── [WA] Flow - Cert Digital - Renovação (lB9WOqZugEcBl5XQ)
+    └── [WA] Flow - Cert Digital - Suporte Técnico (7DNXs3KnkLMfxeh6)
+
+[WA] Flow - Close Chat (7uuqixZ0jWhX1UBi)  ← standalone webhook
+```
+
+- The **Router** is the entry point (webhook from Evolution API). It classifies intent via LLM and calls one of 6 sub-flows via Execute Workflow.
+- **Certificação Digital** is itself a mini-router that further classifies into 3 cert sub-flows.
+- **Close Chat** is independent — a webhook endpoint human agents call to release a user from human mode.
 
 ## LLM Classification
 
 - **Model:** Groq — Llama 3.3 70B Versatile (OpenAI-compatible API)
-- **7 intent categories (Router):** `support`, `sales`, `scheduling`, `billing`, `certification`, `human`, `unclear`
-- **4 sub-categories (Cert Digital):** `codigo`, `renovacao`, `token`, `unclear` (same LLM, separate prompt)
 - **Always prefer LLM classification over keyword matching.** Keyword-based `String.includes()` checks are brittle and fail on natural language. LLM classification should be used whenever intent routing is needed.
-- The `unclear` category catches greetings and vague messages — these do NOT trigger a sub-workflow
-- On LLM failure, the router falls back to the `human` route
+
+### Where category hints are stored
+
+Category hints are **hardcoded in the `jsCode` of each Code node** that builds the LLM prompt. There is no external config table — the system prompt string inside the Code node is the single source of truth.
+
+- **Router hints:** `Build LLM Prompt` node (ID `code-prompt`) in workflow `bS0Mog4nsCyAT7Ao`
+- **Cert Digital hints:** `Build Cert LLM Prompt` node (ID `code-collect`) in workflow `PYyaiGP5p0OMGNp1`
+
+To change category definitions or add new categories, edit the `systemPrompt` variable in the respective Code node.
+
+### Router Classification
+
+The Router's `Build LLM Prompt` node constructs a prompt from two inputs:
+
+1. **System prompt with category hints** — tells the LLM what each category means:
+   - `support`: problemas tecnicos, reclamacoes, duvidas sobre procedimentos
+   - `sales`: interesse em novos servicos, planos, precos
+   - `scheduling`: agendamento, reagendamento, cancelamento de consultas
+   - `billing`: pagamentos, boletos, notas fiscais, cobrancas
+   - `certification`: certificacao digital, codigo, renovacao, token
+   - `human`: quando nenhuma categoria se aplica ou usuario pede atendente
+   - `unclear`: saudacoes simples (oi, ola, bom dia), mensagens vagas sem intencao clara
+
+2. **Conversation history** — the last 10 messages from `chat_messages` are loaded by the `Load Last 10 Messages` Postgres node and included as "Historico recente" in the user message. This gives the LLM context about the ongoing conversation, not just the latest message.
+
+The LLM responds with `{"route": "<category>", "confidence": <0.0-1.0>, "reason": "<reason>"}`. A confidence guard (< 0.5) forces the `human` route. The `unclear` category catches greetings and vague messages — these do NOT trigger a sub-workflow. On LLM failure, the router falls back to the `human` route.
+
+### Cert Digital Sub-Classification
+
+- **4 sub-categories:** `codigo`, `renovacao`, `suporte_tecnico`, `unclear` (same LLM, separate prompt)
+- See "Certificação Digital — LLM Sub-Routing" section below for details
 
 ## Greeting Logic
 
@@ -69,7 +105,7 @@ Originally used **keyword matching** (`String.includes()` checks), which failed 
 Build Cert LLM Prompt → LLM Classify Cert (HTTP/Groq) → Parse Cert Response → Route Cert Subroute
 ```
 
-- **4 categories:** `codigo`, `renovacao`, `token`, `unclear`
+- **4 categories:** `codigo`, `renovacao`, `suporte_tecnico`, `unclear`
 - **Confidence guard:** < 0.7 → falls back to `unclear` (nudge re-ask), not `human`
 - **LLM failure:** `continueOnFail` on HTTP node → Parse node detects missing `choices` → defaults to `unclear`
 - Uses `$('Build Cert LLM Prompt').first().json` to recover original message data (Groq HTTP response doesn't pass through input)
