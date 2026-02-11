@@ -85,13 +85,13 @@ Originally used Google Gemini for LLM classification, but the free tier quota wa
 
 - OpenAI-compatible API (simpler integration via HTTP Request node)
 - Clean JSON output (no markdown wrapping like Gemini sometimes produced)
-- Generous free tier with key rotation (see above)
+- Free tier with key rotation (see above). Note: Groq later reduced `llama-3.3-70b-versatile` from 14,400 RPD to 1,000 RPD per key
 
 Response format changed from `item.candidates[0].content.parts[0].text` (Gemini) to `item.choices[0].message.content` (Groq/OpenAI).
 
 ## Certificação Digital — LLM Sub-Routing
 
-The Certificação Digital flow acts as a mini-router. After sending a greeting menu ("código, renovação ou token?"), it classifies the user's reply to route to one of 3 cert sub-workflows or a nudge fallback.
+The Certificação Digital flow acts as a mini-router. After sending a greeting menu ("código da primeira certificação, compra/renovação do certificado digital ou suporte técnico"), it classifies the user's reply to route to one of 3 cert sub-workflows or a nudge fallback.
 
 Originally used **keyword matching** (`String.includes()` checks), which failed on natural language — e.g., "meu certificado vai vencer mês que vem" didn't match "renovação". Replaced with the **same Groq/Llama 3.3 70B LLM pattern** the main Router uses:
 
@@ -130,3 +130,32 @@ If the agent forgets to call it, the state expires automatically after **30 minu
   - `chat_messages` — Stores message history for LLM context window
 - **Schema:** Defined in `schema.sql`
 - **SSL:** "Ignore SSL Issues" enabled on the connection
+
+---
+
+## Changelog
+
+Reverse-chronological log of significant project changes.
+
+### 2026-02-11 (Session 3)
+
+- **Removed Support, Sales, Billing flows.** These 3 sub-flows and their LLM categories were removed from the Router. Messages that previously matched these categories now naturally fall into `human` or `unclear`. Router categories reduced from 7 → 4 (`scheduling`, `certification`, `human`, `unclear`). Scheduling was kept. Total workflows: 11 → 8.
+- **Renamed "Renovação" → "Compra/Renovação".** The cert sub-flow now covers both purchase and renewal of digital certificates. Workflow, greeting text, and docs updated.
+- **Added 5th Groq API key** to both Router and Cert Digital LLM prompt nodes.
+- **Corrected Groq RPD** — Groq reduced `llama-3.3-70b-versatile` free tier from 14,400 RPD to 1,000 RPD per key. Effective capacity with 5 keys: ~5,000 RPD.
+
+### 2026-02-11 (Session 2)
+
+- **Renamed "Token" → "Suporte Técnico"** in Cert Digital sub-routing (workflow, LLM categories, greeting text).
+- **Moved greeting to unclear route only.** Caabot greeting is now sent only when LLM classifies intent as `unclear`, not before classification. Users with clear intent go straight to the appropriate sub-flow.
+- **Documented LLM classification architecture** in NOTES.md — category hints, cert sub-routing, keyword→LLM migration.
+
+### 2026-02-11 (Session 1)
+
+- **Built the full Router pipeline:** webhook → normalize → filter (fromMe, groups) → dedupe → state machine → LLM classification → sub-flow routing.
+- **Created 6 sub-flows:** Support, Sales, Scheduling, Billing, Human, Certificação Digital (with 3 cert sub-flows: Código, Renovação, Token).
+- **Created Close Chat** standalone webhook for human agents to release users.
+- **Implemented Human silent mode:** `step: "waiting"` state intercepts messages silently while human agent is active.
+- **Migrated Evolution API v1 → v2** to resolve LID-to-phone-number issue.
+- **Switched LLM from Gemini → Groq** after Gemini free tier was exhausted.
+- **Replaced keyword matching with LLM classification** in Cert Digital sub-routing.
