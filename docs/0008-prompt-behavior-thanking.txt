@@ -1,0 +1,43 @@
+*PROMPT*
+
+We need to think about how to behave when the user responds by thanking the bot.
+
+*ANSWER TO THE PROMPT*
+
+Good catch. Right now, if the user replies "obrigado" after that message, here's what would happen:
+
+  1. State is already cleared → Router treats it as a new conversation
+  2. Caabot greeting is sent ("Olá! Eu sou o Caabot...")
+  3. LLM classifies "obrigado" → likely "unclear"
+  4. No sub-workflow is executed
+
+  So the user gets a full greeting again after just saying thanks — feels awkward and robotic.
+
+  A few approaches to handle this:
+
+  1. Thank-you detection in the Router — before sending the Caabot greeting, check if the message is just a thank-you
+  (obrigado, valeu, brigado, etc.) and reply with a short acknowledgment like "De nada! Se precisar de algo mais, é só
+  chamar." — skipping the greeting and LLM entirely.
+  2. Add a "thanks" category to the LLM — teach the LLM to classify gratitude messages so the Router can handle them
+  with a dedicated short response instead of the unclear route.
+  3. Delay state clearing — instead of clearing state immediately in the cert sub-workflows, set a next_step: "followup"
+   step. If the user thanks → acknowledge and clear. If the user asks something new → clear and let the Router
+  re-classify.
+
+  Option 1 is the simplest and most reliable (no LLM call needed, just keyword matching). Option 3 is more robust but
+  adds complexity to every cert sub-workflow. What direction do you prefer?
+
+*PROMPT*
+
+Option 3.
+
+*ANSWER TO THE PROMPT*
+
+● Good choice. Let me implement this. I need to:
+
+  1. Modify the 3 cert sub-workflows — replace DELETE (clear state) with UPSERT (set step: "followup")
+  2. Add a followup step to the Certificação Digital workflow — handle thank-yous gracefully, clear state for everything
+
+● Updating all 3 cert sub-workflows in parallel — each needs: Compose Reply updated to set next_step/active_flow, and
+  the DELETE Postgres node changed to UPSERT.
+

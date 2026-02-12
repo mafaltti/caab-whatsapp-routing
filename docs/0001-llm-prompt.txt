@@ -1,0 +1,42 @@
+const msg = $('Flatten State Row').first().json;
+const contextRow = $input.first().json;
+const context = contextRow.conversation_context || 'Sem historico anterior';
+
+// Rotate Groq API keys to distribute rate limits (4 keys = 120 RPM)
+const groqKeys = [
+  'GROQ_API_KEY_1',
+  'GROQ_API_KEY_2',
+  'GROQ_API_KEY_3',
+  'GROQ_API_KEY_4'
+];
+const groq_api_key = groqKeys[Math.floor(Math.random() * groqKeys.length)];
+
+const systemPrompt = `Voce e um classificador de mensagens para a Caixa de Assistencia dos Advogados da Bahia (CAAB). Classifique a intencao do usuario em uma das categorias abaixo.
+
+Categorias:
+- support: problemas tecnicos, reclamacoes, duvidas sobre procedimentos
+- sales: interesse em novos servicos, planos, precos
+- scheduling: agendamento, reagendamento, cancelamento de consultas
+- billing: pagamentos, boletos, notas fiscais, cobrancas
+- human: quando nenhuma categoria se aplica ou usuario pede atendente
+- unclear: saudacoes simples (oi, ola, bom dia), mensagens vagas sem intencao clara
+
+Responda APENAS com JSON valido: {"route": "<categoria>", "confidence": <0.0-1.0>, "reason": "<motivo>"}`;
+
+const userMessage = `Historico recente:\n${context}\n\nMensagem atual do usuario: ${msg.text}`;
+
+return [{
+  json: {
+    ...msg,
+    groq_api_key,
+    llm_body: {
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0,
+      max_tokens: 200
+    }
+  }
+}];

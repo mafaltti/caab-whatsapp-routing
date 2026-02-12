@@ -45,7 +45,20 @@
       "Bash(curl:*)",
       "Bash(python:*)",
       "Bash($response = curl -s -X POST \"https://evov1.amd01.danilocarneiro.com/chat/findContacts/evo4611\" -H \"Content-Type: application/json\" -H \"apikey: 84a4c0fd414a010c73b251f2f2202a5b\" -d \"{}\")",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "mcp__n8n-mcp__n8n_workflow_versions",
+      "Bash(node -e:*)",
+      "Bash(git -C \"C:/Projetos/caab-whatsapp-routing\" status)",
+      "Bash(git -C \"C:/Projetos/caab-whatsapp-routing\" log --oneline -5)",
+      "Bash(git -C \"C:/Projetos/caab-whatsapp-routing\" add workflows/wa-router.json workflows/wa-flow-support.json workflows/wa-flow-sales.json workflows/wa-flow-scheduling.json workflows/wa-flow-billing.json workflows/wa-flow-human.json)",
+      "Bash(git -C \"C:/Projetos/caab-whatsapp-routing\" commit -m \"$\\(cat <<''EOF''\nExport all n8n workflow definitions to local JSON files\n\nAdds workflows/ directory with exported JSON for all 6 workflows:\n- wa-router.json: Main router with Caabot greeting, LLM classification, unclear intent handling, and 4-key Groq rotation\n- wa-flow-support.json, wa-flow-sales.json, wa-flow-scheduling.json, wa-flow-billing.json, wa-flow-human.json: Sub-workflow definitions\n\nThis enables git-based version tracking of n8n workflow changes made via Claude Code.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"C:/Projetos/caab-whatsapp-routing\" push origin develop)",
+      "Bash(git -C \"C:/Projetos/caab-whatsapp-routing\" add workflows/)",
+      "Bash(git -C \"C:/Projetos/caab-whatsapp-routing\" commit --amend -m \"$\\(cat <<''EOF''\nExport all n8n workflow definitions to local JSON files\n\nAdds workflows/ directory with exported JSON for all 6 workflows:\n- wa-router.json: Main router with Caabot greeting, LLM classification, unclear intent handling, and Groq key rotation\n- wa-flow-support.json, wa-flow-sales.json, wa-flow-scheduling.json, wa-flow-billing.json, wa-flow-human.json: Sub-workflow definitions\n\nAPI keys are redacted with placeholders \\(GROQ_API_KEY_*, EVOLUTION_API_KEY\\).\nThis enables git-based version tracking of n8n workflow changes made via Claude Code.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(node:*)",
+      "mcp__n8n-mcp__n8n_update_full_workflow",
+      "mcp__n8n-mcp__n8n_delete_workflow",
+      "WebFetch(domain:console.groq.com)"
     ]
   },
   "enableAllProjectMcpServers": true,

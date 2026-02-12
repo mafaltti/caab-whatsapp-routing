@@ -1,0 +1,14 @@
+Those are hints/examples added to the system prompt to help the LLM understand what each category means. They give the model context about what kind of
+  messages should be routed where:
+
+  - support: problemas tecnicos, reclamacoes, duvidas sobre procedimentos
+  - sales: interesse em novos servicos, planos, precos
+  - scheduling: agendamento, reagendamento, cancelamento de consultas
+  - billing: pagamentos, boletos, notas fiscais, cobrancas
+  - human: quando nenhuma categoria se aplica ou usuario pede atendente
+  - unclear: saudacoes simples (oi, ola, bom dia), mensagens vagas sem intencao clara
+
+  Without them, the LLM would only see category names like "support" or "billing" and have to guess what belongs where. The hints reduce misclassification —
+   e.g., ensuring "boleto" goes to billing instead of support.
+
+  Want to change or expand any of these descriptions?
